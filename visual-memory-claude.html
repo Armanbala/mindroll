@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#040a04">
+<title>Visual Memory — MindRoll</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#040a04;--bg-r:#081408;
+  --fg:#b8ffb8;--fg-b:#d8ffd8;--fg-d:#7fbf7f;--fg-f:#3a7a3a;
+  --fg-bg:#1e3d1e;--fg-bg2:#2f5f2f;
+  --accent:#6fe06f;--red:#ff6a5a;
+  --glow:0 0 4px rgba(111,224,111,0.35);
+  --font:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.55;min-height:100dvh;-webkit-tap-highlight-color:transparent}
+body{position:relative;padding:0 20px calc(80px + env(safe-area-inset-bottom,0px));text-shadow:var(--glow);display:flex;flex-direction:column;align-items:center}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+
+.topbar{width:100%;max-width:900px;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:11px;letter-spacing:0.08em;color:var(--fg-d);padding:14px 0 10px;border-bottom:1px solid var(--fg-bg);margin-bottom:16px;position:relative;z-index:2}
+.topbar .tb-brand{color:var(--accent);font-weight:700;letter-spacing:0.15em}
+.topbar a{color:var(--fg-d);text-decoration:none}
+.topbar a:hover{color:var(--fg-b)}
+
+.page-head{width:100%;max-width:900px;border-top:1px solid var(--fg-bg);border-bottom:1px solid var(--fg-bg);padding:8px 0;margin-bottom:20px;position:relative;z-index:2}
+.page-head h1{font-size:13px;font-weight:700;color:var(--fg-b);letter-spacing:0.12em;text-transform:uppercase}
+.page-head h1::before{content:"» ";color:var(--accent)}
+
+.wrap{width:100%;max-width:900px;position:relative;z-index:2}
+
+/* Settings */
+.settings{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:12px 14px;border:1px dashed var(--fg-bg);margin-bottom:20px;background:rgba(0,0,0,0.2)}
+.setting-group{display:flex;align-items:center;gap:10px}
+.setting-group label{font-size:11px;color:var(--fg-d);letter-spacing:0.12em;text-transform:uppercase;white-space:nowrap}
+select{font-family:var(--font);font-size:14px;background:var(--bg-r);color:var(--fg-b);border:1px solid var(--fg-bg);padding:7px 26px 7px 10px;outline:none;transition:border-color 0.1s;-webkit-appearance:none;appearance:none;border-radius:0;background-image:linear-gradient(45deg,transparent 50%,var(--fg-d) 50%),linear-gradient(-45deg,transparent 50%,var(--fg-d) 50%);background-position:calc(100% - 12px) 50%,calc(100% - 7px) 50%;background-size:4px 4px;background-repeat:no-repeat}
+select:focus{border-color:var(--accent)}
+
+/* Display box */
+.display-box{background:var(--bg-r);border:1px solid var(--fg-bg);min-height:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;margin-bottom:20px;position:relative;overflow:hidden}
+.display-box::before,.display-box::after{content:"";position:absolute;width:14px;height:14px;border:1px solid var(--accent);opacity:0.8}
+.display-box::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.display-box::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+.timer-bar{position:absolute;bottom:0;left:0;height:3px;background:var(--accent)}
+
+/* Grid */
+.grid-container{display:grid;gap:8px;margin:auto}
+.grid-cell{border-radius:0;background:var(--bg);border:1px solid var(--fg-bg);cursor:pointer;transition:background 0.12s,border-color 0.12s;aspect-ratio:1;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.grid-cell:hover{border-color:var(--fg-d)}
+.grid-cell.highlighted{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(111,224,111,0.4)}
+.grid-cell.selected{background:#2a5a8a;border-color:#3a7aaa}
+.grid-cell.correct{background:var(--accent);border-color:var(--accent)}
+.grid-cell.wrong{background:var(--red);border-color:var(--red)}
+.grid-cell.missed{background:var(--accent);border-color:var(--accent);opacity:0.35}
+.grid-cell:active{opacity:0.7}
+
+/* Level / message */
+.level-display{font-size:clamp(32px,6vw,48px);font-weight:700;color:var(--accent);text-shadow:0 0 12px rgba(111,224,111,0.5);text-align:center}
+.state-message{font-size:16px;color:var(--fg-d);text-align:center;margin-top:8px}
+.sub-message{font-size:13px;color:var(--fg-f);text-align:center;margin-top:4px}
+
+/* Lives */
+.lives-bar{display:flex;gap:8px;justify-content:center;margin-bottom:14px;max-width:900px;width:100%;position:relative;z-index:2}
+.life{width:10px;height:10px;background:var(--red);transition:opacity 0.3s}
+.life.lost{opacity:0.12}
+
+/* Buttons */
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+button{font-family:var(--font);font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;background:transparent;color:var(--fg-b);border:1px solid var(--fg-d);padding:9px 20px;cursor:pointer;border-radius:0;text-shadow:var(--glow);transition:background 0.08s,border-color 0.08s,color 0.08s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:hover{background:rgba(111,224,111,0.1);border-color:var(--accent);color:var(--accent)}
+button:active{background:rgba(111,224,111,0.2)}
+button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);text-shadow:none}
+button.primary:hover{background:#8fff8f;color:var(--bg)}
+button.secondary{border-color:var(--fg-bg);color:var(--fg-d)}
+
+/* Stats */
+.stats-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.stat-card{flex:1 1 90px;background:var(--bg-r);border:1px solid var(--fg-bg);padding:10px 14px;min-width:80px}
+.stat-label{font-size:10px;color:var(--fg-f);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:4px}
+.stat-label::before{content:"› ";color:var(--fg-bg2)}
+.stat-value{font-size:22px;font-weight:700;color:var(--fg-b)}
+
+/* Toast */
+.toast{position:fixed;bottom:calc(28px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:var(--bg);font-weight:700;letter-spacing:0.08em;padding:10px 22px;border:1px solid var(--accent);opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;z-index:100;text-shadow:none;font-family:var(--font);font-size:13px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+@media(max-width:480px){.display-box{min-height:300px;padding:1rem}.grid-container{gap:6px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="tb-brand">MINDROLL_BBS</span>
+  <a href="index.html">← BACK TO LAB</a>
+</div>
+
+<div class="page-head"><h1>Visual Memory</h1></div>
+
+<div class="wrap">
+
+  <div class="settings" id="settings">
+    <div class="setting-group">
+      <label>Mode</label>
+      <select id="gameMode">
+        <option value="progressive">Progressive</option>
+        <option value="fixed">Fixed count</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label>Grid</label>
+      <select id="gridSize">
+        <option value="3">3×3</option>
+        <option value="4" selected>4×4</option>
+        <option value="5">5×5</option>
+        <option value="6">6×6</option>
+      </select>
+    </div>
+    <div class="setting-group" id="fixedCountGroup" style="display:none">
+      <label>Tiles</label>
+      <select id="fixedCount">
+        <option value="3">3</option><option value="4">4</option><option value="5" selected>5</option>
+        <option value="6">6</option><option value="7">7</option><option value="8">8</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="lives-bar" id="livesBar" style="display:none"></div>
+
+  <div class="display-box" id="displayBox">
+    <div class="level-display" id="levelDisplay" style="display:none"></div>
+    <span class="state-message" id="stateMsg">Press start to begin</span>
+    <span class="sub-message" id="subMsg">Memorize the highlighted squares, then click them</span>
+    <div class="grid-container" id="grid" style="display:none"></div>
+    <div class="timer-bar" id="timerBar" style="width:0%"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="primary" id="startBtn" onclick="startGame()">Start</button>
+    <button class="primary" id="nextBtn" onclick="nextRound()" style="display:none">Next round</button>
+    <button class="secondary" id="retryBtn" style="display:none">Try again</button>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-card"><div class="stat-label">Level</div><div class="stat-value" id="statLevel">1</div></div>
+    <div class="stat-card"><div class="stat-label">Best</div><div class="stat-value" id="statBest">0</div></div>
+    <div class="stat-card"><div class="stat-label">Rounds</div><div class="stat-value" id="statRounds">0</div></div>
+    <div class="stat-card"><div class="stat-label">Accuracy</div><div class="stat-value" id="statAccuracy">-</div></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let state='idle',gridSize=4,highlightCount=3,level=1,lives=3,maxLives=3;
+let highlightedCells=new Set(),selectedCells=new Set(),correctClicks=0,wrongClicks=0;
+let timerTimeout=null,stats={best:parseInt(localStorage.getItem('mindroll_visual_best')||'0',10),rounds:0,totalCorrect:0,totalClicks:0};
+function $(id){return document.getElementById(id)}
+
+$('gameMode').addEventListener('change',function(){$('fixedCountGroup').style.display=this.value==='fixed'?'flex':'none'});
+$('retryBtn').onclick=resetToMenu;
+
+function startGame(){
+  gridSize=parseInt($('gridSize').value,10);
+  if($('gameMode').value==='progressive'){level=1;highlightCount=3;}
+  else{level=1;highlightCount=parseInt($('fixedCount').value,10);}
+  lives=3;maxLives=3;correctClicks=0;wrongClicks=0;
+  stats.rounds=0;stats.totalCorrect=0;stats.totalClicks=0;
+  updateStats();$('statsBar').style.display='flex';$('settings').style.display='none';
+  startRound();
+}
+
+function startRound(){
+  state='showing';selectedCells.clear();highlightedCells.clear();
+  const maxCells=gridSize*gridSize;
+  if(highlightCount>maxCells-1)highlightCount=maxCells-1;
+  const indices=[];
+  while(indices.length<highlightCount){const r=Math.floor(Math.random()*maxCells);if(!indices.includes(r))indices.push(r);}
+  indices.forEach(i=>highlightedCells.add(i));
+  renderLives();
+  $('startBtn').style.display='none';$('nextBtn').style.display='none';$('retryBtn').style.display='none';
+  $('grid').style.display='none';
+  $('levelDisplay').style.display='block';$('levelDisplay').textContent='Level '+level;
+  $('levelDisplay').style.animation='none';$('levelDisplay').offsetHeight;$('levelDisplay').style.animation='pulse 0.4s ease';
+  $('stateMsg').style.display='block';$('stateMsg').textContent=highlightCount+' tiles to memorize';
+  $('subMsg').style.display='none';
+  setTimeout(()=>{$('levelDisplay').style.display='none';$('stateMsg').style.display='none';buildGrid();showHighlights();},800);
+}
+
+function buildGrid(){
+  const grid=$('grid');
+  const avail=Math.min(window.innerWidth-60,560);
+  const cellSize=Math.min(Math.floor((avail/gridSize)-8),80);
+  grid.style.display='grid';
+  grid.style.gridTemplateColumns=`repeat(${gridSize},${cellSize}px)`;
+  grid.style.gridTemplateRows=`repeat(${gridSize},${cellSize}px)`;
+  grid.innerHTML='';
+  for(let i=0;i<gridSize*gridSize;i++){
+    const cell=document.createElement('div');
+    cell.className='grid-cell';cell.dataset.index=i;
+    cell.addEventListener('click',()=>cellClicked(i));
+    cell.addEventListener('touchend',e=>{e.preventDefault();cellClicked(i);});
+    grid.appendChild(cell);
+  }
+}
+
+function showHighlights(){
+  const cells=$('grid').children;
+  highlightedCells.forEach(i=>cells[i].classList.add('highlighted'));
+  const displayTime=Math.max(800,Math.min(3000,highlightCount*400));
+  $('timerBar').style.width='100%';
+  const startTime=Date.now();
+  const tick=()=>{const elapsed=Date.now()-startTime;const pct=Math.max(0,100-(elapsed/displayTime*100));$('timerBar').style.width=pct+'%';if(elapsed<displayTime)requestAnimationFrame(tick);};
+  requestAnimationFrame(tick);
+  timerTimeout=setTimeout(()=>{
+    highlightedCells.forEach(i=>cells[i].classList.remove('highlighted'));
+    $('timerBar').style.width='0%';state='answering';
+    $('stateMsg').style.display='block';$('stateMsg').textContent='Click the tiles you remember';
+  },displayTime);
+}
+
+function cellClicked(index){
+  if(state!=='answering')return;
+  const cells=$('grid').children;
+  const cell=cells[index];
+  if(selectedCells.has(index))return;
+  selectedCells.add(index);stats.totalClicks++;
+  if(highlightedCells.has(index)){
+    cell.classList.add('correct');correctClicks++;stats.totalCorrect++;
+    let allFound=true;highlightedCells.forEach(i=>{if(!selectedCells.has(i))allFound=false;});
+    if(allFound)roundWin();
+  } else {
+    cell.classList.add('wrong');wrongClicks++;lives--;renderLives();
+    if(lives<=0)roundLose();
+  }
+}
+
+function roundWin(){
+  state='result';stats.rounds++;
+  const cells=$('grid').children;highlightedCells.forEach(i=>cells[i].classList.add('correct'));
+  $('stateMsg').style.display='block';$('stateMsg').textContent=wrongClicks===0?'Perfect!':'Nice!';
+  showToast(wrongClicks===0?'Flawless!':'Round cleared');
+  if($('gameMode').value==='progressive'){level++;highlightCount++;}else{level++;}
+  if(level-1>stats.best){stats.best=level-1;localStorage.setItem('mindroll_visual_best',stats.best.toString());}
+  updateStats();$('nextBtn').style.display='inline-block';
+}
+
+function roundLose(){
+  state='gameover';stats.rounds++;
+  const cells=$('grid').children;highlightedCells.forEach(i=>{if(!selectedCells.has(i))cells[i].classList.add('missed');});
+  $('stateMsg').style.display='block';$('stateMsg').textContent='Game over';
+  $('subMsg').style.display='block';$('subMsg').textContent='You reached level '+level;
+  if(level>stats.best){stats.best=level;localStorage.setItem('mindroll_visual_best',stats.best.toString());}
+  updateStats();$('retryBtn').style.display='inline-block';
+}
+
+function nextRound(){$('nextBtn').style.display='none';startRound()}
+
+function renderLives(){
+  const bar=$('livesBar');bar.style.display='flex';bar.innerHTML='';
+  for(let i=0;i<maxLives;i++){const d=document.createElement('div');d.className='life'+(i>=lives?' lost':'');bar.appendChild(d);}
+}
+
+function updateStats(){
+  $('statLevel').textContent=level;$('statBest').textContent=stats.best;$('statRounds').textContent=stats.rounds;
+  $('statAccuracy').textContent=stats.totalClicks>0?Math.round(stats.totalCorrect/stats.totalClicks*100)+'%':'-';
+}
+
+function resetToMenu(){
+  state='idle';$('grid').style.display='none';$('levelDisplay').style.display='none';
+  $('stateMsg').style.display='block';$('stateMsg').textContent='Press start to begin';
+  $('subMsg').style.display='block';$('subMsg').textContent='Memorize the highlighted squares, then click them';
+  $('livesBar').style.display='none';$('startBtn').style.display='inline-block';
+  $('nextBtn').style.display='none';$('retryBtn').style.display='none';
+  $('settings').style.display='flex';$('statsBar').style.display='none';$('timerBar').style.width='0%';
+}
+
+function showToast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500)}
+$('statBest').textContent=stats.best;
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&state==='idle')startGame();if(e.key==='Enter'&&state==='result')nextRound();});
+</script>
+</body>
+</html>

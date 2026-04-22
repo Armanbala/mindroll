@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#040a04">
+<title>MindRoll — Cognitive Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #040a04;
+  --bg-raised:  #081408;
+  --fg:         #b8ffb8;
+  --fg-bright:  #d8ffd8;
+  --fg-dim:     #7fbf7f;
+  --fg-mute:    #5a9f5a;
+  --fg-faint:   #3a7a3a;
+  --fg-bg:      #1e3d1e;
+  --fg-bg-2:    #2f5f2f;
+  --accent:     #6fe06f;
+  --red:        #ff6a5a;
+  --glow:       0 0 4px rgba(111,224,111,0.35);
+  --font:       'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  position: relative;
+  padding: 0 20px env(safe-area-inset-bottom, 80px);
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  text-shadow: var(--glow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* scanlines */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(0deg,
+    rgba(0,0,0,0.18) 0 1px,
+    transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+.topbar, .prompt-line, .index-wrap, .page-head { position: relative; z-index: 2; }
+
+/* Top bar */
+.topbar {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  padding: 18px 0 10px;
+  border-bottom: 1px solid var(--fg-bg);
+  margin-bottom: 18px;
+}
+.topbar .tb-left,
+.topbar .tb-right { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.topbar .tb-brand { color: var(--accent); font-weight: 700; letter-spacing: 0.2em; }
+.topbar .tb-sep { color: var(--fg-bg-2); }
+.topbar a { color: var(--fg-dim); text-decoration: none; }
+.topbar a:hover { color: var(--fg-bright); }
+
+/* Prompt line */
+.prompt-line {
+  width: 100%;
+  max-width: 960px;
+  font-size: 13px;
+  padding: 6px 0 18px;
+}
+.prompt-line .p-user { color: var(--accent); }
+.prompt-line .p-path { color: var(--fg-faint); }
+.prompt-line .p-cmd  { margin-left: 8px; color: var(--fg-bright); }
+.cursor {
+  display: inline-block;
+  width: 0.55em;
+  margin-left: 3px;
+  animation: blink 1.06s steps(2,start) infinite;
+}
+@keyframes blink { to { opacity: 0; } }
+
+/* Index wrap */
+.index-wrap {
+  width: 100%;
+  max-width: 960px;
+}
+
+/* Page head */
+.page-head {
+  border-top: 1px solid var(--fg-bg);
+  border-bottom: 1px solid var(--fg-bg);
+  padding: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.page-head h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg-bright);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.page-head h1::before { content: "» "; color: var(--accent); }
+.page-head .head-meta {
+  font-size: 11px;
+  color: var(--fg-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Lede */
+.lede {
+  font-size: 14px;
+  color: var(--fg-dim);
+  padding: 6px 0 22px;
+  max-width: 640px;
+  line-height: 1.6;
+}
+.lede .accent { color: var(--accent); }
+
+/* Section label */
+.section-label {
+  font-size: 11px;
+  color: var(--fg-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 22px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::before { content: "──"; color: var(--fg-bg-2); }
+.section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--fg-bg) 0 4px, transparent 4px 8px);
+}
+
+/* Table head */
+.table-head {
+  display: grid;
+  grid-template-columns: 42px 220px 1fr 130px 70px;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--fg-faint);
+  letter-spacing: 0.18em;
+  padding: 4px 6px;
+}
+.rule { border-top: 1px solid var(--fg-bg); margin: 4px 0; }
+
+/* Module list */
+.module-list { display: flex; flex-direction: column; }
+.module {
+  display: grid;
+  grid-template-columns: 42px 220px 1fr 130px 70px;
+  gap: 16px;
+  padding: 11px 6px;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+  color: var(--fg);
+  transition: background 0.08s, border-color 0.08s;
+  align-items: baseline;
+  touch-action: manipulation;
+}
+.module:hover, .module:focus {
+  background: rgba(111,224,111,0.08);
+  border-left-color: var(--accent);
+  outline: none;
+}
+.module:active { background: rgba(111,224,111,0.14); }
+.module .m-id { color: var(--fg-faint); }
+.module .m-name { font-weight: 700; color: var(--fg-bright); letter-spacing: 0.06em; }
+.module:hover .m-name::before, .module:focus .m-name::before { content: "› "; color: var(--accent); margin-left: -14px; }
+.module .m-desc { color: var(--fg-dim); }
+.module:hover .m-desc, .module:focus .m-desc { color: var(--fg-bright); }
+.module .m-tag { color: var(--fg-faint); text-align: right; font-size: 12px; letter-spacing: 0.1em; }
+.module .m-load { text-align: right; color: var(--fg-bg-2); letter-spacing: -1px; }
+.module:hover .m-load, .module:focus .m-load { color: var(--accent); }
+
+/* Status bar */
+.statusbar {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  padding: 16px 0 8px;
+  margin-top: 28px;
+  border-top: 1px solid var(--fg-bg);
+  position: relative;
+  z-index: 2;
+}
+.statusbar .key { color: var(--fg-faint); margin-right: 6px; }
+.statusbar .spacer { flex: 1; }
+
+/* Responsive */
+@media (max-width: 760px) {
+  body { padding: 0 14px calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .topbar { font-size: 10px; flex-wrap: wrap; }
+  .topbar .tb-left { gap: 10px; }
+  .page-head h1 { font-size: 14px; }
+  .table-head { display: none; }
+  .module {
+    grid-template-columns: 36px 1fr;
+    grid-template-rows: auto auto auto;
+    padding: 13px 6px;
+    gap: 4px 12px;
+  }
+  .module .m-id   { grid-row: 1 / span 3; align-self: start; padding-top: 2px; }
+  .module .m-name { grid-column: 2; }
+  .module .m-desc { grid-column: 2; font-size: 13px; }
+  .module .m-tag  { grid-column: 2; text-align: left; font-size: 11px; }
+  .module .m-load { display: none; }
+  .statusbar .spacer + span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-left">
+    <span class="tb-brand">MINDROLL_BBS v2.7</span>
+    <span class="tb-sep">│</span>
+    <span>NODE 01 · user: guest</span>
+  </div>
+  <div class="tb-right">
+    <span id="clock">—</span>
+  </div>
+</div>
+
+<div class="prompt-line">
+  <span class="p-user">guest@mindroll</span><span class="p-path">:~$</span><span class="p-cmd">list --all --format=table</span><span class="cursor">▊</span>
+</div>
+
+<div class="index-wrap">
+
+  <div class="page-head">
+    <h1>Cognitive Lab // 6 modules online</h1>
+    <div class="head-meta">short-term · working · reflex</div>
+  </div>
+
+  <p class="lede">
+    A small suite of memory exercises for span, pattern recall and reaction time.
+    All progress stays in <span class="accent">local storage</span> — no accounts, no sync, no ads.
+    Select a row to launch.
+  </p>
+
+  <div class="section-label">modules · memory</div>
+
+  <div class="table-head">
+    <span>ID</span>
+    <span>MODULE</span>
+    <span>DESCRIPTION</span>
+    <span class="right" style="text-align:right">CLASS</span>
+    <span class="right" style="text-align:right">LOAD</span>
+  </div>
+  <div class="rule"></div>
+
+  <nav class="module-list">
+    <a class="module" href="digit-memorization.html">
+      <span class="m-id">01</span>
+      <span class="m-name">DIGIT_MEMORIZATION</span>
+      <span class="m-desc">Memorize a sequence of digits. Recall in order when prompted.</span>
+      <span class="m-tag">[SHORT-TERM]</span>
+      <span class="m-load">█████</span>
+    </a>
+    <a class="module" href="visual-memory-claude.html">
+      <span class="m-id">02</span>
+      <span class="m-name">VISUAL_MEMORY</span>
+      <span class="m-desc">Tiles flash on a grid. Re-select the ones that lit up.</span>
+      <span class="m-tag">[SPATIAL]</span>
+      <span class="m-load">█████</span>
+    </a>
+    <a class="module" href="sequence-memory-claude.html">
+      <span class="m-id">03</span>
+      <span class="m-name">SEQUENCE_MEMORY</span>
+      <span class="m-desc">Watch a growing pattern. Repeat it exactly. Chain the levels.</span>
+      <span class="m-tag">[PATTERN]</span>
+      <span class="m-load">█████</span>
+    </a>
+    <a class="module" href="chimp-test-claude.html">
+      <span class="m-id">04</span>
+      <span class="m-name">CHIMP_TEST</span>
+      <span class="m-desc">Numbers appear then vanish. Tap in ascending order from memory.</span>
+      <span class="m-tag">[WORKING]</span>
+      <span class="m-load">█████</span>
+    </a>
+  </nav>
+
+  <div class="section-label">modules · speed &amp; tools</div>
+
+  <div class="table-head">
+    <span>ID</span>
+    <span>MODULE</span>
+    <span>DESCRIPTION</span>
+    <span style="text-align:right">CLASS</span>
+    <span style="text-align:right">LOAD</span>
+  </div>
+  <div class="rule"></div>
+
+  <nav class="module-list">
+    <a class="module" href="reaction-time-claude.html">
+      <span class="m-id">05</span>
+      <span class="m-name">REACTION_TIME</span>
+      <span class="m-desc">Wait for the green signal. Click fast. Five rounds, best + average.</span>
+      <span class="m-tag">[REFLEX]</span>
+      <span class="m-load">█████</span>
+    </a>
+    <a class="module" href="random-number-generator.html">
+      <span class="m-id">06</span>
+      <span class="m-name">NUMBER_GENERATOR</span>
+      <span class="m-desc">Random number utility with filters, math operators and multi-output.</span>
+      <span class="m-tag">[UTILITY]</span>
+      <span class="m-load">█████</span>
+    </a>
+  </nav>
+
+  <div class="statusbar">
+    <span><span class="key">[↑↓]</span> navigate</span>
+    <span><span class="key">[ENTER]</span> launch</span>
+    <span><span class="key">[H]</span> help</span>
+    <span class="spacer"></span>
+    <span>~/.mindroll/local · stored on this device only</span>
+  </div>
+</div>
+
+<script>
+  function tick() {
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    const el = document.getElementById('clock');
+    if (el) el.textContent = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  (function() {
+    const rows = Array.from(document.querySelectorAll('.module'));
+    let i = -1;
+    function focus(n) {
+      if (i >= 0) { rows[i].style.background = ''; rows[i].style.borderLeftColor = 'transparent'; }
+      i = (n + rows.length) % rows.length;
+      rows[i].style.background = 'rgba(111,224,111,0.12)';
+      rows[i].style.borderLeftColor = 'var(--accent)';
+      rows[i].focus({ preventScroll: false });
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown')  { e.preventDefault(); focus(i + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); focus(i - 1); }
+      else if (e.key === 'Enter' && i >= 0) { window.location.href = rows[i].href; }
+    });
+    rows.forEach(r => r.setAttribute('tabindex','0'));
+  })();
+</script>
+
+</body>
+</html>
